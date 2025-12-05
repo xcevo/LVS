@@ -24,7 +24,7 @@ def extract_metadata(cir):
 
     # Extract all subcircuits
     subckt_pattern = re.compile(
-        r"\.SUBCKT\s+(\w+)\s+([^\n]+?)\n(.*?)\.ENDS\s+\1",
+        r"\.SUBCKT\s+(\w+)\s+([^\n]+?)\n(.*?)\.ENDS(?:\s+\1)?",
         re.IGNORECASE | re.DOTALL
     )
     
