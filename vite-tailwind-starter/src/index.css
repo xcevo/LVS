@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+
+
+@keyframes shineSweep {
+  0%   { transform: translateX(-150%) skewX(-20deg); }
+  100% { transform: translateX(150%)  skewX(-20deg); }
+}
+
+.shine-anim {
+  position: relative;
+  overflow: hidden;          /* sweep ko text/icon ke andar clip kare */
+  isolation: isolate;        /* z-index layering clean */
+}
+
+.shine-anim::after {
+  content: "";
+  position: absolute;
+  top: -60%;
+  left: -40%;
+  width: 65%;
+  height: 220%;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    rgba(0,0,0,0) 0%,
+    rgba(255, 255, 255, 0.45) 50%,
+    rgba(0,0,0,0) 100%
+  );
+  filter: blur(0.3px);
+  animation: shineSweep 2.0s linear infinite;
+  opacity: 0.8;
+  z-index: 2;
+}

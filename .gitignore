@@ -1,0 +1,9 @@
+# Ignore Python virtual environment
+backend/venv/
+
+# Ignore everything inside backend/users, but keep the folder
+backend/users/
+
+
+# Ignore node_modules
+vite-tailwind-starter/node_modules/
