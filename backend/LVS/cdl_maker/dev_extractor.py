@@ -1,8 +1,33 @@
 from collections import defaultdict
 from .geometry_utils import *
-
 from shapely.geometry import LineString, MultiLineString
 
+#----------------------------------------------------------------
+		
+def add_to_cell(cell, shapes, layer, dbu):
+	new_shapes = boolean_or(shapes, shapes, dbu, (layer[0], layer[1]))
+	delete(cell, shapes)
+	for p in new_shapes.polygons:
+		cell.add(gdspy.Polygon(p, layer = layer[0], datatype = layer[1]))
+	
+	return cell
+	
+#----------------------------------------------------------------	
+	
+def polygon_oring(cell, polygons, stack, dbu):
+	for layer in stack:
+		if type(layer) == list:
+			for sublay in layer:
+				shapes = polygons.get(sublay, [])
+				if len(shapes) > 0:
+					cell = add_to_cell(cell, shapes, sublay, dbu)
+		else:
+			shapes = polygons.get(layer, [])
+			if len(shapes) > 0:
+				cell = add_to_cell(cell, shapes, layer, dbu)
+			
+	return cell
+	
 #----------------------------------------------------------------			
 
 def base_layer_ops(cell, polygons, layermap, dbu):
@@ -12,18 +37,13 @@ def base_layer_ops(cell, polygons, layermap, dbu):
 	np_shapes = polygons.get(layermap[("np", "drawing")], [])
 	nw_shapes = polygons.get(layermap[("nwell", "drawing")], [])
 	
-	diff = boolean_or(diff_shapes, diff_shapes, dbu, (1000,0))
-	for p in diff.polygons:
-		cell.add(gdspy.Polygon(p, layer = 1000, datatype = 0))
 	
-	delete(cell, diff_shapes)
-	
-	diff_not_poly = boolean_not(diff, poly_shapes, dbu, layermap[("diff", "drawing")])
+	diff_not_poly = boolean_not(diff_shapes, poly_shapes, dbu, layermap[("diff", "drawing")])
 	layer = layermap[("diff", "drawing")]
 	for p in diff_not_poly.polygons:
 		cell.add(gdspy.Polygon(p, layer = layer[0], datatype = layer[1]))
 	
-	gate = boolean_and(diff, poly_shapes, dbu, (1001,0))
+	gate = boolean_and(diff_shapes, poly_shapes, dbu, (1001,0))
 	pmos = boolean_and(gate, pp_shapes, dbu, (1002,0))
 	nmos = boolean_and(gate, np_shapes, dbu, (1003,0))
 	
@@ -32,11 +52,12 @@ def base_layer_ops(cell, polygons, layermap, dbu):
 	for p in nmos.polygons:
 		cell.add(gdspy.Polygon(p, layer = 1003, datatype = 0))
 
-	pdiff = boolean_and(diff, pp_shapes, dbu , (1004,0))
-	ndiff = boolean_and(diff, np_shapes, dbu, (1005,0))
+	pdiff = boolean_and(diff_shapes, pp_shapes, dbu , (1004,0))
+	ndiff = boolean_and(diff_shapes, np_shapes, dbu, (1005,0))
 	pbody = boolean_and(ndiff, nw_shapes, dbu, (1006,0))
 	nbody = boolean_not(pdiff, nw_shapes, dbu, (1007,0))
 	
+	delete(cell, diff_shapes)
 	for p in nbody.polygons:
 		cell.add(gdspy.Polygon(p, layer = 1006, datatype = 0))
 	for p in pbody.polygons:

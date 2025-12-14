@@ -50,8 +50,9 @@ def canonicalize_devices(ports, devlist):
 		# Device signature is order-independent by sorting nets
 		signature = (
 			normalize_model(d["model"]),
-			tuple(sorted([D, G, S, B])),
-			d["inst"]
+			tuple([D, G, S, B]),
+			d["inst"],
+			d["nets"]
 		)
 		canonical.append(signature)
 
@@ -70,10 +71,10 @@ def nets_check_fun(sub1, sub2):
 	sig1 = canonicalize_devices(sub1["ports"], sub1["devices"])
 	sig2 = canonicalize_devices(sub2["ports"], sub2["devices"])
 
-	#print("sig1", sig1)
-	#print("\nsig2", sig2)
+#	print("sig1", sig1)
+#	print("\nsig2", sig2)
 	
-	if sig1 == sig2:
+	if [s1[:2] for s1 in sig1] == [s2[:2] for s2 in sig2]:
 		return {}
 	else:
 		all_nets = set()
@@ -81,9 +82,10 @@ def nets_check_fun(sub1, sub2):
 		all_nets.add(p for s in sig2 for p in s[1])
 				
 		diff = {
-			"Schematic": [s for s in sig1 if s not in sig2],
-			"Layout":   [s for s in sig2 if s not in sig1]
+			"Schematic": [s for s in sig1 if s[:2] not in sig2],
+			"Layout":   [s for s in sig2 if s[:2] not in sig1]
 		}
+		
 		diff["Schematic"].sort()
 		diff["Layout"].sort()
 		
@@ -95,9 +97,19 @@ def nets_check_fun(sub1, sub2):
 			dev2 = diff["Layout"][idx] if idx < len(diff["Layout"]) else []
 			
 			if dev1!=[] and dev2!=[]:
-				for p1, p2 in zip(dev1[1], dev2[1]):
-					if p1 != p2:
-						mismatch.append((p1, p2))
+				for i in range(len(dev1[1])):
+					if dev1[1][i] != dev2[1][i]:
+						j = 2 if i == 0 else (0 if i == 2 else i)
+						
+						if dev1[1][i] != dev2[1][j] and dev1[1][j] != dev2[1][j]:
+							mismatch.append((dev1[3][i], dev2[3][j]))
+						elif dev1[1][i] != dev2[1][j]:
+							mismatch.append((dev1[3][i], dev2[3][i]))
+							
+							
+#				for p1, p2 in zip(dev1[1], dev2[1]):
+#					if p1 != p2:
+#						mismatch.append((p1, p2))
 							
 			elif dev2 == [] and dev1!=[]:
 				for p in dev1[1]:
@@ -109,7 +121,7 @@ def nets_check_fun(sub1, sub2):
 					if p not in all_nets:
 						mismatch.append((None, p)) 
 				
-		return mismatch
+		return list(set(mismatch))
 		
 # -------------------------------------------------
 # Compare two subcircuits for device mismatch
@@ -126,7 +138,10 @@ def device_check_fun(sub1, sub2):
 			"Schematic": [(s[0],s[2]) for s in sig1 if s[:2] not in sig2],
 			"Layout":   [(s[0], s[2]) for s in sig2 if s[:2] not in sig1]
 		}
-		if [d1[0] for d1 in diff["Schematic"]].sort() == [d2[0] for d2 in diff["Layout"]].sort():
+		diff["Schematic"].sort()
+		diff["Layout"].sort()
+		
+		if [d1[0] for d1 in diff["Schematic"]] == [d2[0] for d2 in diff["Layout"]]:
 			return {}
 		else:
 			return diff

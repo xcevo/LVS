@@ -1,5 +1,7 @@
 from flask import Blueprint, request, jsonify
 import os
+
+from flask_jwt_extended import get_jwt_identity, jwt_required
 import cirScan
 from io import BytesIO
 import gdsScan
@@ -20,10 +22,12 @@ def lvs_celllist(cir, gds):
 
 
 @cell_list_bp.route('/lvs_celllist', methods=['POST'])
+@jwt_required() 
 def get_lvs_celllist():
     data = request.get_json()
     # Static username for now
-    username = "sahil"
+    # username = "sahil"
+    username = get_jwt_identity()       
     user_dir = os.path.join(os.path.dirname(__file__), 'users', username)
 
     # Expected filenames

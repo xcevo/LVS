@@ -1,13 +1,15 @@
-from flask import Flask, request, jsonify, send_file, after_this_request,send_from_directory
-from flask import send_file, request
+from datetime import timedelta
+from flask import Flask, send_from_directory
 from flask_cors import CORS
-from flask_jwt_extended import JWTManager,jwt_required,get_jwt_identity
-from pymongo import MongoClient
+from flask_jwt_extended import JWTManager
 import os
+
+from pymongo import MongoClient
 from gdsHandler import gds_bp
 from cirHandler import cir_bp
 from cellListHandler import cell_list_bp
 from lvs_handler import lvs_bp
+from auth import auth_bp
 
 app = Flask(__name__, static_folder='dist', static_url_path='')
 CORS(app, supports_credentials=True, resources={r"/*": {"origins": "*"}})
@@ -16,6 +18,18 @@ app.register_blueprint(gds_bp, url_prefix='/gds')
 app.register_blueprint(cir_bp, url_prefix='/cir')   
 app.register_blueprint(cell_list_bp, url_prefix='/cell_list')
 app.register_blueprint(lvs_bp, url_prefix='/lvs')
+app.register_blueprint(auth_bp, url_prefix='/auth')
+
+
+app.secret_key = 'your_secret_key'
+app.config["JWT_SECRET_KEY"] = "meraSuperSecretKey123" 
+app.config["JWT_TOKEN_LOCATION"] = ["headers", "cookies"]
+app.config["JWT_COOKIE_CSRF_PROTECT"] = False
+app.config["JWT_COOKIE_SECURE"] = False
+app.config["JWT_COOKIE_SAMESITE"] = "Strict"
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(minutes=30)
+app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=3)
+jwt = JWTManager(app)
 
 
 @app.route('/')

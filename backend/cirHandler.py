@@ -2,6 +2,8 @@
 from flask import Blueprint, request, jsonify
 import os
 from io import BytesIO
+
+from flask_jwt_extended import get_jwt_identity, jwt_required
 import cirScan
 
 cir_bp = Blueprint("cir", __name__)
@@ -23,6 +25,7 @@ def extract_tree_cells(tree, collected):
 # 1) Upload CIR file and scan metadata
 # ============================================
 @cir_bp.route('/get_circells', methods=['POST'])
+@jwt_required()
 def get_circells():
     if 'cir_file' not in request.files:
         return jsonify({"status": "error", "message": "No file uploaded"}), 400
@@ -37,7 +40,8 @@ def get_circells():
     print("CIR file uploaded:", filename)
 
     # For testing, keeping static username 
-    username = "sahil"
+    # username = "sahil"
+    username = get_jwt_identity()
     user_dir = os.path.join(os.path.dirname(__file__), "users", username)
     os.makedirs(user_dir, exist_ok=True)
 
@@ -74,6 +78,7 @@ def get_circells():
 # 2) Scan saved CIR netlist again (similar to /scan_gds)
 # ============================================
 @cir_bp.route('/scan_cir', methods=['POST'])
+@jwt_required()
 def scan_cir():
     try:
         data = request.get_json()
@@ -82,7 +87,8 @@ def scan_cir():
         if not inpCir:
             return jsonify({"error": "Missing 'inpCir' parameter"}), 400
 
-        username = "sahil"
+        # username = "sahil"
+        username = get_jwt_identity()
         user_dir = os.path.join(os.path.dirname(__file__), "users", username)
         inpCir_path = os.path.join(user_dir, inpCir)
 

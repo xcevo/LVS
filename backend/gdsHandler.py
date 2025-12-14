@@ -1,6 +1,8 @@
 from flask import Blueprint, request, jsonify
 import os
 from io import BytesIO
+
+from flask_jwt_extended import get_jwt_identity, jwt_required
 import gdsScan
 
 gds_bp = Blueprint('gds', __name__)
@@ -15,7 +17,7 @@ def extract_cell_names(tree, cell_names):
 	return cell_names
 
 @gds_bp.route('/get_cellnames', methods=['POST'])
-# @jwt_required()
+@jwt_required()
 def get_cellnames():
 	if 'gds_file' not in request.files:
 		return jsonify({'status': 'error', 'message': 'No file part'}), 400
@@ -27,8 +29,8 @@ def get_cellnames():
 	filename = file.filename
 
 	# ✅ Get username from JWT
-	# username = get_jwt_identity()
-	username = "sahil" 
+	username = get_jwt_identity()
+	# username = "sahil" 
 	user_dir = os.path.join(os.path.dirname(__file__), 'users', username)
 	os.makedirs(user_dir, exist_ok=True)
 
@@ -65,7 +67,7 @@ def get_cellnames():
 
 
 @gds_bp.route('/scan_gds', methods=['POST'])
-# @jwt_required()
+@jwt_required()
 def scan_gds():
 	try:
 		data = request.get_json()
@@ -80,8 +82,8 @@ def scan_gds():
 
 		response_data = {}
 
-		# username = get_jwt_identity()
-		username = "sahil"
+		username = get_jwt_identity()
+		# username = "sahil"
 		user_dir = os.path.join(os.path.dirname(__file__), 'users', username)
 		inpGds_path = os.path.join(user_dir,inpGds)
 		

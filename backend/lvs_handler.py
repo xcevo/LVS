@@ -12,7 +12,7 @@ from LVS.lvs_runner import lvs_runner
 lvs_bp = Blueprint('lvs', __name__)
 
 @lvs_bp.route('/lvs_runner', methods=['POST'])
-# @jwt_required()
+@jwt_required()
 def lvs_runner_api():
 
     try:
@@ -21,7 +21,8 @@ def lvs_runner_api():
         print("LVS API called with data:", data)        
 
         # Static username for now
-        username = "sahil"
+        # username = "sahil"
+        username = get_jwt_identity()
         user_dir = os.path.join("users", username)
 
         netlist_path = os.path.join(user_dir, data.get("netlist"))
