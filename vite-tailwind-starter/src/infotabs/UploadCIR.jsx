@@ -33,6 +33,14 @@ export default function UploadCIR() {
       const nameOnly = (up.savedPath || "").split(/[\\/]/).pop();
       localStorage.setItem("cir_file_name", nameOnly);
       window.__lastCirPath = up.savedPath || "";
+      // 🔔 notify LVS CellList that CIR/GDS pair may have changed (future-proof refetch trigger)
+      // (does NOT replace existing events; just adds a new one)
+      const gdsName = localStorage.getItem("gds_file_name") || "";
+      window.dispatchEvent(
+        new CustomEvent("lvs:pairChanged", {
+          detail: { cirName: nameOnly, gdsName },
+        })
+      );
       // (optional) cells list event
       window.dispatchEvent(
         new CustomEvent("cir:cells", {

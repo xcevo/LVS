@@ -19,34 +19,54 @@ export default class Filter extends React.Component {
     window.__selectedRuleExplanations = Array.from(this.state.selected);
 
     window.__filterRules = Array.from(this.state.rules);
+   this.setState((prev) => ({
+     allOn: prev.selected.size === prev.rules.length,
+   }));
   }
 
-  // small toggle (emerald theme)
-  RenderToggle({ on, setOn, label }) {
-    return (
-      <button
-        type="button"
-        aria-label={label}
-        onClick={() => setOn(!on)}
-        className={`relative inline-flex h-[22px] w-10 items-center rounded-full transition ${
-          on ? "bg-emerald-500" : "bg-white/15"
+ // small toggle (emerald theme)
+RenderToggle({ on, label, onToggle }) {
+  return (
+    <span
+      role="switch"
+      tabIndex={0}
+      aria-checked={on}
+      aria-label={label}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onToggle && onToggle();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          e.stopPropagation();
+          onToggle && onToggle();
+        }
+      }}
+      className={`relative inline-flex h-[22px] w-10 items-center rounded-full transition select-none cursor-pointer ${
+        on ? "bg-emerald-500" : "bg-white/15"
+      }`}
+    >
+      <span
+        className={`pointer-events-none inline-block h-[18px] w-[18px] transform rounded-full bg-black transition ${
+          on ? "translate-x-[20px]" : "translate-x-[2px]"
         }`}
-      >
-        <span
-          className={`inline-block h-[18px] w-[18px] transform rounded-full bg-black transition ${
-            on ? "translate-x-[20px]" : "translate-x-[2px]"
-          }`}
-        />
-      </button>
-    );
-  }
+      />
+    </span>
+  );
+}
 
-  handleAll = (v) => {
+  handleAll = () => {
     this.setState(
-      (prev) => ({
-        allOn: v,
-        selected: v ? new Set(prev.rules) : new Set(),
-      }),
+      (prev) => {
+        const isAll = prev.selected.size === prev.rules.length;
+        const nextAll = !isAll;                     // if all → deselect, else select all
+        return {
+          allOn: nextAll,
+          selected: nextAll ? new Set(prev.rules) : new Set(),
+        };
+      },
       () => {
         window.__selectedRuleExplanations = Array.from(this.state.selected);
         window.__filterRules = Array.from(this.state.rules);
@@ -59,7 +79,7 @@ export default class Filter extends React.Component {
       (prev) => {
         const next = new Set(prev.selected);
         next.has(r) ? next.delete(r) : next.add(r);
-        return { selected: next }; // allOn remains independent
+        return { selected: next, allOn: next.size === prev.rules.length };
       },
       () => {
         window.__selectedRuleExplanations = Array.from(this.state.selected);
@@ -101,10 +121,17 @@ export default class Filter extends React.Component {
    <div
      className="fixed left-2 top-[51px] w-[360px] group"
      style={{ zIndex: this.state.z || 50 }}
-     onMouseDown={() => {
-       window.__floatingZ = (window.__floatingZ || 50) + 1;
-       this.setState({ z: window.__floatingZ });
-     }}
+     onMouseDown={(e) => {
+  // IMPORTANT: interactive cheez pe click ho to z-setState mat karo (click miss hota hai)
+  const interactive = e.target.closest(
+    'button, input, label, a, select, textarea, [role="button"], [role="switch"]'
+  );
+  if (interactive) return;
+
+  window.__floatingZ = (window.__floatingZ || 50) + 1;
+  this.setState({ z: window.__floatingZ });
+}}
+
    >
      {/* gradient border wrapper — matches Toggle */}
      <div className="relative rounded-xl p-[1px] bg-gradient-to-br from-white/15 via-white/5 to-transparent">
@@ -119,10 +146,19 @@ export default class Filter extends React.Component {
          <div className="px-3 py-2 text-xs font-semibold text-center bg-white/[.03] border border-white/10 rounded-md">
            Rules
          </div>
-          <div className="mt-3 flex items-center gap-3 px-3 py-2 bg-white/[.02] border border-white/10 rounded-md">
-    <Toggle on={allOn} setOn={this.handleAll} label="Select all / Deselect all" />
-    <span className="text-sm">{allOn ? "Select all" : "Deselect all"}</span>
-  </div>
+        <div
+           role="button"
+           tabIndex={0}
+   onClick={this.handleAll}
+   onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && this.handleAll()}
+           className="mt-3 w-full flex items-center gap-3 px-3 py-2 bg-white/[.02] border border-white/10 rounded-md
+                     text-left hover:bg-white/[.04] transition cursor-pointer select-none"
+           aria-pressed={allOn}
+         >
+          <Toggle on={allOn} label="Select all / Deselect all" onToggle={this.handleAll} />
+
+           <span className="text-sm">{allOn ? "Deselect all" : "Select all"}</span>
+         </div>
 
          {/* ...rest of your existing inner content stays the same... */}
           {/* multi-select list of 5 rules */}

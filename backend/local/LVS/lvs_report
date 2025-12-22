@@ -1,0 +1,195 @@
+
+	============================================================
+		                LVS VERIFICATION REPORT
+	============================================================
+
+	Tool              : Logicknots LVS
+	Tool Version      : 1.0
+	Run Date          : 03-12-2025 17:44:34 IST
+	Run Host          : lvs-server-01
+	User              : user1
+
+	------------------------------------------------------------
+	DESIGN INFORMATION
+	------------------------------------------------------------
+	Top Cell          : nr02d7
+	Layout Database   : 10t_5cells.gds
+	Source Netlist    : 10t_5cells.cdl
+	Technology        : 180nm
+	Process Corners   : Typical
+	Supply Nets       : ['VDD', 'VSS']
+
+	------------------------------------------------------------
+	RUN OPTIONS
+	------------------------------------------------------------
+	Hierarchy Mode    : Flattened
+	Pin Matching      : By Name
+	Net Matching      : By Connectivity
+	Tolerance (W/L)   : 1%
+
+	------------------------------------------------------------
+	LVS SUMMARY
+	------------------------------------------------------------
+	✅ LAYOUT VS SCHEMATIC MATCH       : ❌ FAILED
+
+	Total Devices (Schematic)          : 8
+	Total Devices (Layout)             : 8
+
+	Total Nets (Schematic)             : 3
+	Total Nets (Layout)                : 3
+
+	Total Ports (Schematic)            : 5
+	Total Ports (Layout)               : 5
+
+	------------------------------------------------------------
+	CHECK RESULTS SUMMARY
+	------------------------------------------------------------
+	Check Type                 Status        Count
+	------------------------------------------------------------
+
+	Port Check                  PASS           0
+	Device Check                PASS           0
+	Device Size Check           FAIL           6
+	Nets Check                  FAIL           2
+	Open Nets                   PASS           0
+	Shorted Nets                PASS           0
+
+	------------------------------------------------------------
+	DETAILED LVS RESULTS
+	------------------------------------------------------------
+	
+	------------------------------------------------------------
+	PORT / PIN CHECK
+	------------------------------------------------------------
+	Port Mapping       : MATCH
+	Unconnected Ports  : NONE
+
+	========================
+	DEVICE MISMATCHES
+	========================
+	Total Device Errors : 0
+
+	========================
+	DEVICE SIZE MISMATCHES
+	========================
+	Total Device Errors : 6
+
+	------------------------------------------------------------
+	Device Size Error #1
+	------------------------------------------------------------
+	Schematic
+	Device Type          : NMOS
+	Length (L)           : 0.186u
+	Width (W)            : 5.018u
+	
+	Layout
+	Device Type          : NMOS
+	Length (L)           : 0.18u
+	Width (W)            : 0.972u
+
+	------------------------------------------------------------
+	Device Size Error #2
+	------------------------------------------------------------
+	Schematic
+	Device Type          : NMOS
+	Length (L)           : 0.18u
+	Width (W)            : 0.97u
+	
+	Layout
+	Device Type          : NMOS
+	Length (L)           : 0.18u
+	Width (W)            : 5.2u
+
+	------------------------------------------------------------
+	Device Size Error #3
+	------------------------------------------------------------
+	Schematic
+	Device Type          : PMOS
+	Length (L)           : 0.183u
+	Width (W)            : 2.122u
+	
+	Layout
+	Device Type          : PMOS
+	Length (L)           : 0.18u
+	Width (W)            : 14.366u
+
+	------------------------------------------------------------
+	Device Size Error #4
+	------------------------------------------------------------
+	Schematic
+	Device Type          : PMOS
+	Length (L)           : 0.183u
+	Width (W)            : 2.262u
+	
+	Layout
+	Device Type          : PMOS
+	Length (L)           : 0.18u
+	Width (W)            : 2.161u
+
+	------------------------------------------------------------
+	Device Size Error #5
+	------------------------------------------------------------
+	Schematic
+	Device Type          : PMOS
+	Length (L)           : 0.186u
+	Width (W)            : 2.118u
+	
+	Layout
+	Device Type          : PMOS
+	Length (L)           : 0.18u
+	Width (W)            : 2.194u
+
+	------------------------------------------------------------
+	Device Size Error #6
+	------------------------------------------------------------
+	Schematic
+	Device Type          : PMOS
+	Length (L)           : 0.18u
+	Width (W)            : 14.24u
+	
+	Layout
+	Device Type          : PMOS
+	Length (L)           : 0.18u
+	Width (W)            : 2.3u
+
+	========================
+	NETS MISMATCH
+	========================
+	Total nets mismatched : 2
+
+	------------------------------------------------------------
+	Nets #1
+	------------------------------------------------------------
+	Schematic           : PORT_A2
+	Layout              : INT_3
+
+	------------------------------------------------------------
+
+	------------------------------------------------------------
+	Nets #2
+	------------------------------------------------------------
+	Schematic           : PORT_VDD
+	Layout              : PORT_A2
+
+	------------------------------------------------------------
+
+	========================
+	OPEN NETS
+	========================
+	Total Open Nets : 0
+
+	========================
+	SHORTED NETS
+	========================
+	Total Shorted Nets : 0
+
+	------------------------------------------------------------
+	FINAL STATUS
+	------------------------------------------------------------
+	LVS ❌ FAILED
+
+	Errors must be resolved before sign-off.
+
+	============================================================
+	END OF LVS REPORT
+	============================================================

@@ -2,6 +2,7 @@ import {
   MessageSquare, Save, BookOpen,
   Play,
 } from "lucide-react";
+import { useState } from "react";
 import Toggle from "../dropdowns/toggle";
 import InfoPanel from "../dropdowns/info";
 import UploadGDS from "../infotabs/uploadgds";
@@ -10,7 +11,7 @@ import Tooltip from "../tools/tooltip";
 import EyePanel from "../dropdowns/eye";
 import UploadCIR from "../infotabs/UploadCIR";
 
-
+import RunGuardPopup from "./RunGuardPopup";
 
 function IconBtn({ title, children, onClick }) {
   return (
@@ -26,6 +27,7 @@ function IconBtn({ title, children, onClick }) {
 }
 
 export default function Header() {
+const [guard, setGuard] = useState({ open: false, mode: "both" });
 
   const API_BASE_URL = import.meta.env.VITE_API_URL;
   const handleRun = async () => {
@@ -44,6 +46,15 @@ export default function Header() {
     const selected_cells = Array.isArray(window.__selectedLvsCells)
       ? window.__selectedLvsCells
       : Array.from(window.__selectedLvsCells || []);
+
+    const missingRules = selectedRuleNames.size === 0;
+const missingCells = !selected_cells || selected_cells.length === 0;
+
+if (missingRules || missingCells) {
+  const mode = missingRules && missingCells ? "both" : missingRules ? "rules" : "cells";
+  setGuard({ open: true, mode });
+  return; // ⛔ stop run
+}
     // API ko sirf ye 2 fields bhejni hain
     const cirName = localStorage.getItem("cir_file_name") || "";
     const gdsName = localStorage.getItem("gds_file_name") || "";
@@ -100,6 +111,7 @@ export default function Header() {
 
   };
   return (
+    <>
     <header className="fixed top-0 z-50 w-full h-[50px] pt-[4px] border-b border-white/10 bg-[#1e1e1e]/95 backdrop-blur">
       <div className="h-11 px-3 flex items-center justify-between">
 
@@ -167,5 +179,14 @@ export default function Header() {
 
       </div>
     </header>
+
+
+    <RunGuardPopup
+      open={guard.open}
+      mode={guard.mode}
+      onClose={() => setGuard({ open: false, mode: "both" })}
+    />
+  </>
+    
   );
 }

@@ -45,6 +45,13 @@ window.dispatchEvent(
   })
 );
 
+ // 🔔 notify LVS CellList that CIR/GDS pair may have changed (future-proof refetch trigger)
+ // (does NOT replace existing events; just adds a new one)
+ const cirName = localStorage.getItem("cir_file_name") || "";
+ window.dispatchEvent(
+   new CustomEvent("lvs:pairChanged", { detail: { cirName, gdsName: nameOnly } })
+ );
+
     // savedPath may be like "users/<username>/<file>.gds"
     // backend /scan_gds expects only the filename; it will prefix users/<username> itself
    

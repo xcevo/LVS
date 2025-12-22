@@ -382,7 +382,10 @@ export default function InfoPanel() {
             )}
 
             {/* other tabs (as before)… */}
-            {tab === 2 && <CellList initialData={cellsData} />}
+            <div style={{ display: tab === 2 ? "block" : "none" }}>
+  <CellList initialData={cellsData} />
+</div>
+
             {tab === 3 && <Results />}
           </div>
 

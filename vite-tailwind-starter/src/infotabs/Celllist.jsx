@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import HeirarchyScan from "../subtabs/heirarchyScan";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
@@ -45,54 +45,120 @@ export default function CellList({ initialData }) {
   const [cirFile, setCirFile] = useState("");
   const [gdsFile, setGdsFile] = useState("");
   const [lvsCells, setLvsCells] = useState([]); // array of strings
+  // abort + pair tracking (prevents stale fetch overwrite)
+  const abortRef = useRef(null);
+  const lastPairRef = useRef("");
 
   const [filter, setFilter] = useState("");
-  const [selected, setSelected] = useState(new Set()); // selected cell names
+  const [selected, setSelected] = useState(() => {
+  try {
+    const saved = JSON.parse(localStorage.getItem("selected_lvs_cells") || "[]");
+    return new Set(Array.isArray(saved) ? saved : []);
+  } catch {
+    return new Set();
+  }
+}); // selected cell names
+ // selected cell names
 
   // Fetch once when component mounts OR when user switches to tab 0 first time
+  const fetchLvsCells = useCallback(async ({ cirName, gdsName }) => {
+    // ✅ Only call API when BOTH are present (CDL/CIR + GDS dependency)
+    if (!cirName || !gdsName) return;
+
+    // cancel previous in-flight
+    try { abortRef.current?.abort?.(); } catch {}
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+
+   try {
+      setLoading(true);
+      setApiErr("");
+
+      const token = localStorage.getItem("access_token") || null;
+      const headers =
+        window.location.hostname !== "localhost" && token
+          ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
+          : { "Content-Type": "application/json" };
+
+     const res = await fetch(`${API_BASE_URL}/cell_list/lvs_celllist`, {
+        method: "POST",
+        credentials: "include",
+        headers,
+        signal: ctrl.signal,
+        body: JSON.stringify({
+          cir_File: cirName,
+          gds_File: gdsName,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || data?.error || "Fetch failed");
+
+      setCirFile(data?.cirFile || "");
+      setGdsFile(data?.gdsFile || "");
+      setLvsCells(Array.isArray(data?.lvsCells) ? data.lvsCells : []);
+    } catch (err) {
+      if (err?.name === "AbortError") return;
+      setApiErr(String(err));
+    } finally {
+      // avoid setState after abort
+      if (!ctrl.signal.aborted) setLoading(false);
+    }
+  }, []);
+
+  // cleanup on unmount
   useEffect(() => {
-    // if we already fetched, don't refetch
-    if (lvsCells.length || loading || subTab !== 0) return;
-
-    const fetchCells = async () => {
-      try {
-        setLoading(true);
-        setApiErr("");
-
-        const token = localStorage.getItem("access_token") || null;
-        const headers =
-          window.location.hostname !== "localhost" && token
-            ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
-            : { "Content-Type": "application/json" };
-
-        const cirName = localStorage.getItem("cir_file_name") || "";
-        const gdsName = localStorage.getItem("gds_file_name") || "";
-
-        const res = await fetch(`${API_BASE_URL}/cell_list/lvs_celllist`, {
-          method: "POST",
-          credentials: "include",
-          headers,
-          body: JSON.stringify({
-            cir_File: cirName,
-            gds_File: gdsName,
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data?.message || data?.error || "Fetch failed");
-
-        setCirFile(data?.cirFile || "");
-        setGdsFile(data?.gdsFile || "");
-        setLvsCells(Array.isArray(data?.lvsCells) ? data.lvsCells : []);
-      } catch (err) {
-        setApiErr(String(err));
-      } finally {
-        setLoading(false);
-      }
+    return () => {
+      try { abortRef.current?.abort?.(); } catch {}
     };
+  }, []);
 
-    fetchCells();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subTab]);
+  // ✅ Fetch when user opens LVS tab (subTab 0) AND pair is ready
+  useEffect(() => {
+    if (subTab !== 0) return;
+
+    const cirName = localStorage.getItem("cir_file_name") || "";
+    const gdsName = localStorage.getItem("gds_file_name") || "";
+    if (!cirName || !gdsName) return;
+
+    const pairKey = `${cirName}||${gdsName}`;
+    if (lastPairRef.current !== pairKey) {
+      lastPairRef.current = pairKey;
+      // clear old meta quickly (prevents showing old CIR/GDS label for new pair)
+      setCirFile("");
+      setGdsFile("");
+      setLvsCells([]);
+      setApiErr("");
+    }
+
+    // fetch (idempotent due to abort + pairKey check)
+    fetchLvsCells({ cirName, gdsName });
+  }, [subTab, fetchLvsCells]);
+
+  // ✅ Fetch again automatically whenever CIR/GDS changes (UploadCIR/UploadGDS fires lvs:pairChanged)
+  useEffect(() => {
+    const onPairChanged = (e) => {
+      const cirName =
+        e?.detail?.cirName ?? localStorage.getItem("cir_file_name") ?? "";
+      const gdsName =
+        e?.detail?.gdsName ?? localStorage.getItem("gds_file_name") ?? "";
+      if (!cirName || !gdsName) return;
+
+      const pairKey = `${cirName}||${gdsName}`;
+      if (lastPairRef.current !== pairKey) {
+        lastPairRef.current = pairKey;
+        setCirFile("");
+        setGdsFile("");
+        setLvsCells([]);
+        setApiErr("");
+      }
+
+      fetchLvsCells({ cirName, gdsName });
+   };
+
+    window.addEventListener("lvs:pairChanged", onPairChanged);
+    return () => window.removeEventListener("lvs:pairChanged", onPairChanged);
+  }, [fetchLvsCells]);
 
   // expose current selection globally for Header Play
   useEffect(() => {
