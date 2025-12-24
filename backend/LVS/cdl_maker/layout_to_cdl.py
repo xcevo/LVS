@@ -3,9 +3,8 @@ import json
 from typing import Dict, List, Tuple, Optional
 from .poly_mapper import *
 from .nets_extractor import recursive_connect
-from .dev_extractor import *
+from .dev_extractor import * 
 from .pin_handler import *
-
 
 # ===============================================================
 # CDL writer
@@ -107,7 +106,7 @@ def read_layout(layout, cellname):
 	polygons = get_polygons(cell)
 	labels = get_labels(cell)
 	
-	return cell, polygons, labels, dbu
+	return cell, polygons, labels, dbu, lib
 	
 # ===============================================================
 # Main Function
@@ -117,47 +116,55 @@ def layout_to_cdl(gds_file, cellname, out_cdl, layermap, config_file):
 	"""
 	Entry point: extract devices from layout and generate CDL.
 	"""
-	# Have to add support for a list of cells
-	top_cell, polygons, labels, dbu = read_layout(gds_file, cellname) 
+	
+	top_cell, polygons, labels, dbu, lib = read_layout(gds_file, cellname) 
 	#print(top_cell.name)
 	layer_keys = read_layermap(layermap)
 	layer_keys, stack, pin_info = read_config(config_file, layer_keys)
 	
-	top_cell = base_layer_ops(top_cell, polygons, layer_keys, dbu)
+	top_cell = polygon_oring(top_cell, polygons, stack, dbu)
 	polygons = get_polygons(top_cell)
-	
-	uf = UnionFind()
-	netmap = {}
-	for pin, metal in pin_info.items():
-		if pin in labels.keys() and metal in polygons.keys():
-			netmap = map_labels_to_polygons(uf, labels[pin], polygons[metal], netmap, dbu)
-	
-	ports = get_ports(pin_info, labels)
-	netmap = assign_ids(uf, polygons, netmap, 1)
-	netmap = recursive_connect(uf, stack, polygons, netmap, layer_keys[("poly", "drawing")], ports)
+	flag, top_cell, error = base_layer_ops(top_cell, polygons, layer_keys, dbu)
+
+	if flag == True: 
+		polygons = get_polygons(top_cell)
+		# lib.write_gds("temp.gds")
 		
-	poly_stack = [[(1002,0),(1003,0)], layer_keys[("poly", "drawing")]]
-	netmap = recursive_connect(uf, poly_stack, polygons, netmap, layer_keys[("poly", "drawing")], ports)
-	
-	final_netmap = update_nets(netmap, uf.parent)
-	
-	devmap1 = find_edge_sharing(polygons[(1002, 0)], polygons[layer_keys[("diff", "drawing")]], dbu)
-	devmap2 = find_edge_sharing(polygons[(1003, 0)], polygons[layer_keys[("diff", "drawing")]], dbu)
-	
-	supply = get_supply(polygons, layer_keys, final_netmap)
-	
-	pmos, wp, lp = find_properties(final_netmap, devmap1, "PMOS", list(supply.values()), dbu)
-	nmos, wn, ln = find_properties(final_netmap, devmap2, "NMOS", list(supply.values()), dbu)
-	
-	for k, v in pmos.items():
-		nmos[k] = v
-	for k, v in wp.items():
-		wn[k] = v
-	for k, v in lp.items():
-		ln[k] = v
+		uf = UnionFind()
+		netmap = {}
+		for pin, metal in pin_info.items():
+			if pin in labels.keys() and metal in polygons.keys():
+				netmap = map_labels_to_polygons(uf, labels[pin], polygons[metal], netmap, dbu)
 		
-	write_cdl(nmos, wn, ln, ports[0], top_cell.name, out_cdl)
+		ports = get_ports(pin_info, labels)
+		netmap = assign_ids(uf, polygons, netmap, 1)
+		netmap = recursive_connect(uf, stack, polygons, netmap, layer_keys[("poly", "drawing")], ports)
+			
+		poly_stack = [[(1002,0),(1003,0)], layer_keys[("poly", "drawing")]]
+		netmap = recursive_connect(uf, poly_stack, polygons, netmap, layer_keys[("poly", "drawing")], ports)
+		
+		final_netmap = update_nets(netmap, uf.parent)
+		
+		devmap1 = find_edge_sharing(polygons[(1002, 0)], polygons[layer_keys[("diff", "drawing")]], dbu)
+		devmap2 = find_edge_sharing(polygons[(1003, 0)], polygons[layer_keys[("diff", "drawing")]], dbu)
+		
+		supply = get_supply(polygons, layer_keys, final_netmap)
+		
+		pmos, wp, lp = find_properties(final_netmap, devmap1, "PMOS", supply, dbu)
+		nmos, wn, ln = find_properties(final_netmap, devmap2, "NMOS", supply, dbu)
+		
+		for k, v in pmos.items():
+			nmos[k] = v
+		for k, v in wp.items():
+			wn[k] = v
+		for k, v in lp.items():
+			ln[k] = v
+			
+		write_cdl(nmos, wn, ln, ports[0], top_cell.name, out_cdl)
+		
+		return flag, error, list(supply.values())
 	
-	return list(supply.values())
+	else:
+		return flag, error, []
 
 #layout_to_cdl("/home/linuxmint/Desktop_content/LVS_tool/10t_5cells.gds", "./dummy_cdl", "./layermap_SCL.json", "./config.json")

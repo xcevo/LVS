@@ -52,7 +52,7 @@ def canonicalize_devices(ports, devlist):
 			normalize_model(d["model"]),
 			tuple([D, G, S, B]),
 			d["inst"],
-			d["nets"]
+			tuple(d["nets"])
 		)
 		canonical.append(signature)
 
@@ -77,49 +77,71 @@ def nets_check_fun(sub1, sub2):
 	if [s1[:2] for s1 in sig1] == [s2[:2] for s2 in sig2]:
 		return {}
 	else:
-		all_nets = set()
-		all_nets.add(p for s in sig1 for p in s[1])
-		all_nets.add(p for s in sig2 for p in s[1])
-				
-		diff = {
-			"Schematic": [s for s in sig1 if s[:2] not in sig2],
-			"Layout":   [s for s in sig2 if s[:2] not in sig1]
-		}
+		diff = { "Schematic" : [], "Layout" : []}
+		s2_matched = []
+		for s1 in sig1:
+			flag = 0
+			for s2 in sig2:
+				if s1[:2] == s2[:2]:
+					flag = 1
+					s2_matched.append(s2)
+				elif s1[0] == s2[0]:
+					if s1[1][1] == s2[1][1] and s1[1][3] == s2[1][3]:
+						if s1[1][0] == s2[1][2] and s1[1][2] == s2[1][0]:
+							flag = 1
+							s2_matched.append(s2)
+			if flag == 0:
+				diff["Schematic"].append(s1)
+			
+		diff["Layout"] = [s for s in sig2 if s not in s2_matched]
+		#print("diff", diff)
 		
-		diff["Schematic"].sort()
-		diff["Layout"].sort()
+		count = {}
+		for dev1 in diff["Schematic"]:
+			for dev2 in diff["Layout"]:
+				if dev1[0] ==  dev2[0]:
+					count[(dev1, dev2)] = 0
+					for i in range(len(dev1[1])):
+						if dev1[1][i] == dev2[1][i]:
+							count[(dev1, dev2)]+=1
+						else:
+							j = 2 if i == 0 else (0 if i == 2 else i)
+							if dev1[1][i] == dev2[1][j]:
+								count[(dev1, dev2)]+=1
 		
-		max_dev = max(len(diff["Schematic"]), len(diff["Layout"]))
+		count = dict(sorted(count.items(), key = lambda x: x[1], reverse=True))
 		
 		mismatch = []
-		for idx in range(max_dev):
-			dev1 = diff["Schematic"][idx] if idx < len(diff["Schematic"]) else []
-			dev2 = diff["Layout"][idx] if idx < len(diff["Layout"]) else []
-			
-			if dev1!=[] and dev2!=[]:
-				for i in range(len(dev1[1])):
-					if dev1[1][i] != dev2[1][i]:
-						j = 2 if i == 0 else (0 if i == 2 else i)
-						
-						if dev1[1][i] != dev2[1][j] and dev1[1][j] != dev2[1][j]:
-							mismatch.append((dev1[3][i], dev2[3][j]))
-						elif dev1[1][i] != dev2[1][j]:
-							mismatch.append((dev1[3][i], dev2[3][i]))
+		dev_matched = []
+		error_nets = []
+		for key in count.keys():
+			if key[0] not in dev_matched and key[1] not in dev_matched:
+				if count[key] > 0:
+					dev1 = key[0]
+					dev2 = key[1]
+					dev_matched.append(key[0])
+					dev_matched.append(key[1])
+					for i in range(len(dev1[1])):
+						#print("i", i, dev1[1][i], dev2[1][i])
+						if dev1[1][i] != dev2[1][i]:
+							j = 2 if i == 0 else (0 if i == 2 else i)
+							#print("j", j, dev1[1][i], dev2[1][j], dev1[1][j], dev2[1][j])
+							if dev1[1][i] != dev2[1][j] and dev1[1][j] != dev2[1][j]:
+								mismatch.append((dev1[3][i], dev2[3][j]))
+								error_nets.extend([dev1[3][i], dev2[3][j]])
+							elif dev1[1][i] != dev2[1][j]:
+								mismatch.append((dev1[3][i], dev2[3][i]))
+								error_nets.extend([dev1[3][i], dev2[3][i]])
 							
 							
-#				for p1, p2 in zip(dev1[1], dev2[1]):
-#					if p1 != p2:
-#						mismatch.append((p1, p2))
-							
-			elif dev2 == [] and dev1!=[]:
-				for p in dev1[1]:
-					if p not in all_nets:
-						mismatch.append((p, None)) 
-				
-			elif dev1 == [] and dev2!=[]:			
-				for p in dev2[1]:
-					if p not in all_nets:
-						mismatch.append((None, p)) 
+				else:
+					for p in dev1[1]:
+						if p not in error_nets:
+							mismatch.append((p, None)) 
+					
+					for p in dev2[1]:
+						if p not in error_nets:
+							mismatch.append((None, p)) 
 				
 		return list(set(mismatch))
 		

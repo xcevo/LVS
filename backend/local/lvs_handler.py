@@ -15,7 +15,7 @@ lvs_bp = Blueprint('lvs', __name__)
 # @jwt_required()
 def lvs_runner_api():
 
-    try:
+    # try:
         data = request.get_json()
 
         print("LVS API called with data:", data)        
@@ -61,5 +61,6 @@ def lvs_runner_api():
         else:
             return jsonify({"status": "error", "message": "Report not generated."}), 404
 
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+    # except Exception as e:
+    #     print("Error in LVS API:", str(e))
+    #     return jsonify({"status": "error", "message": str(e)}), 500

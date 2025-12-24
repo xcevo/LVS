@@ -1,29 +1,38 @@
 {
 	"pin_info" : [
 		{
-			"pin" : [40, 7],
-			"metal" : [40, 0]
+			"pin" : [9, 3],
+			"metal" : [9, 0]
 		},
 		{
-			"pin" : [41, 7],
-			"metal" : [41, 0]
+			"pin" : [11, 3],
+			"metal" : [11, 0]
+		},
+		{
+			"pin" : [13, 3],
+			"metal" : [13, 0]
+		},
+		{
+			"pin" : [15, 3],
+			"metal" : [15, 0]
 		}
 	],
 	"layer_stack" : [
-		[["OD", "drawing"], ["PO", "drawing"]], 
-		["CONT", "drawing"], 
+		[["Diff", "drawing"], ["Poly", "drawing"]], 
+		[["CA", "drawing"], ["CB", "drawing"]], 
+		["M0", "drawing"], 
+		["V1", "drawing"], 
 		["M1", "drawing"], 
-		["VIA1", "drawing"], 
-		["M2", "drawing"], 
-		["VIA2", "drawing"], 
-		["M3","drawing"], 
-		["VIA3", "drawing"]
+		["V2", "drawing"], 
+		["M2","drawing"], 
+		["V3", "drawing"],
+		["M3","drawing"]
 	],
 	"layer_map" : {
-		"poly" : [8,0],
-		"diff" : [9,0],
-		"pp" : [31,0],
-		"np" : [32,0],
-		"nwell" : [3,0]
+		"poly" : [6,0],
+		"diff" : [5,0],
+		"pp" : [4,0],
+		"np" : [3,0],
+		"nwell" : [1,0]
 	}
 }

@@ -16,13 +16,20 @@ def canonicalize_nets(ports, devlist):
 
 	# 1. Build connectivity signature for each internal net
 	net_connections = defaultdict(list)
+	connectivity = defaultdict(list)
 
+	def map_net(n):
+		if n in port_set:
+			return f"PORT_{n}"
+		return internal_map[n]
+		
 	for d in devlist:
 		for num, role in enumerate(["d", "g", "s", "b"]):
 			net = d["nets"][num]
 			if net not in port_set:
-				# Store type + role (D/G/S/B) for grouping
-				net_connections[net].append(str(d["inst"])+"."+str(role))
+				net_connections[net].append((str(d["inst"]),str(role)))
+			else:
+				connectivity[map_net(net)].append((str(d["inst"]),str(role)))
 
 	# 2. Assign deterministic IDs based on sorted connectivity signatures
 	internal_map = {}
@@ -32,13 +39,6 @@ def canonicalize_nets(ports, devlist):
 		internal_map[net] = f"INT_{idx+1}"
 
 	# 3. Convert each net into canonical signature
-	
-	def map_net(n):
-		if n in port_set:
-			return f"PORT_{n}"
-		return internal_map[n]
-			
-	connectivity = {}
 	for (net, conn) in sorted(net_connections.items(), key=lambda x: sorted(x[1])):
 		connectivity[map_net(net)] = conn
 
@@ -75,12 +75,13 @@ def normalize_connections(subckt1, subckt2, net1, net2):
 				break
 		if flag == 0:
 			map_dev[dev2[0]] = "layout_"+str(dev2[0])
-			
+		
+	#print("map_dev", map_dev)
 	for net, conn in net2.items():
 		new_conn = []
 		for p in conn:
-			new_conn.append(map_dev[p.split(".")[0]])
-			
+			new_conn.append((map_dev[p[0]], p[1]))
+		
 		net2[net] = new_conn
 			
 	return net1, net2
@@ -103,9 +104,19 @@ def find_opens(source, layout):
 		for p in conn:
 			if p in dgsb:
 				mapped_nets.add(dgsb[p])
-
+						
 		if len(mapped_nets) > 1:
-			opens[net_name] = mapped_nets
+			for net in mapped_nets:
+				count = 0
+				for conn1 in source[net]:
+					for conn2 in layout[net]:
+						if conn1 == conn2:
+							count+=1
+						elif conn1[0] == conn2[0] and ((conn1[1] == "s" and conn2[1] == "d") or (conn1[1] == "d" and conn2[1] == "s")):
+							count+=1
+						
+				if len(source[net]) != count:
+					opens[net_name] = mapped_nets
 		
 	return opens
 
@@ -128,7 +139,17 @@ def find_shorts(source, layout):
 				mapped_nets.add(dgsb[p])
 
 		if len(mapped_nets) > 1:
-			shorts[net_name] = mapped_nets
+			for net in mapped_nets:
+				count = 0
+				for conn1 in source[net]:
+					for conn2 in layout[net]:
+						if conn1 == conn2:
+							count+=1
+						elif conn1[0] == conn2[0] and ((conn1[1] == "s" and conn2[1] == "d") or (conn1[1] == "d" and conn2[1] == "s")):
+							count+=1
+						
+				if len(source[net]) != count:
+					shorts[net_name] = mapped_nets
 
 	return shorts
 
@@ -145,6 +166,7 @@ def opens_shorts_checker(cellname, source_netlist, layout_netlist, skip_cell=[],
 		net2, subckt2 = canonicalize_nets(layout_netlist[cellname]["ports"], layout_netlist[cellname]["devices"])
 		
 		net1, net2 = normalize_connections(subckt1, subckt2, net1, net2)
+
 		if lvs_check == "opens":
 			final[cellname] = find_opens(net1, net2)
 		elif lvs_check == "shorts":

@@ -1,9 +1,21 @@
 # Ignore Python virtual environment
+__pycache__/
+
+*.py[cod]
+*.pyo
+*.pyd
+
+
 backend/venv/
 
 # Ignore everything inside backend/users, but keep the folder
 backend/users/
 
+# Ignore Python virtual environment
+backend/local/venv/
+
+# Ignore everything inside backend/users, but keep the folder
+backend/local/users/
 
 # Ignore node_modules
 vite-tailwind-starter/node_modules/

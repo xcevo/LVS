@@ -36,34 +36,44 @@ def base_layer_ops(cell, polygons, layermap, dbu):
 	pp_shapes = polygons.get(layermap[("pp", "drawing")], [])
 	np_shapes = polygons.get(layermap[("np", "drawing")], [])
 	nw_shapes = polygons.get(layermap[("nwell", "drawing")], [])
+	flag = True
+	error = ""
 	
-	
-	diff_not_poly = boolean_not(diff_shapes, poly_shapes, dbu, layermap[("diff", "drawing")])
-	layer = layermap[("diff", "drawing")]
-	for p in diff_not_poly.polygons:
-		cell.add(gdspy.Polygon(p, layer = layer[0], datatype = layer[1]))
-	
-	gate = boolean_and(diff_shapes, poly_shapes, dbu, (1001,0))
-	pmos = boolean_and(gate, pp_shapes, dbu, (1002,0))
-	nmos = boolean_and(gate, np_shapes, dbu, (1003,0))
-	
-	for p in pmos.polygons:
-		cell.add(gdspy.Polygon(p, layer = 1002, datatype = 0))
-	for p in nmos.polygons:
-		cell.add(gdspy.Polygon(p, layer = 1003, datatype = 0))
+	try:
+		diff_not_poly = boolean_not(diff_shapes, poly_shapes, dbu, layermap[("diff", "drawing")])
+		layer = layermap[("diff", "drawing")]
+		for p in diff_not_poly.polygons:
+			cell.add(gdspy.Polygon(p, layer = layer[0], datatype = layer[1]))
+		
+		gate = boolean_and(diff_shapes, poly_shapes, dbu, (1001,0))
+		pmos = boolean_and(gate, pp_shapes, dbu, (1002,0))
+		nmos = boolean_and(gate, np_shapes, dbu, (1003,0))
+		
+		for p in pmos.polygons:
+			cell.add(gdspy.Polygon(p, layer = 1002, datatype = 0))
+		for p in nmos.polygons:
+			cell.add(gdspy.Polygon(p, layer = 1003, datatype = 0))
+	except:
+		flag = False
+		error = "No Device Found. Cannot Execute LVS"
+		return flag, cell, error
 
-	pdiff = boolean_and(diff_shapes, pp_shapes, dbu , (1004,0))
-	ndiff = boolean_and(diff_shapes, np_shapes, dbu, (1005,0))
-	pbody = boolean_and(ndiff, nw_shapes, dbu, (1006,0))
-	nbody = boolean_not(pdiff, nw_shapes, dbu, (1007,0))
+	try:
+		pdiff = boolean_and(diff_shapes, pp_shapes, dbu , (1004,0))
+		ndiff = boolean_and(diff_shapes, np_shapes, dbu, (1005,0))
+		pbody = boolean_and(ndiff, nw_shapes, dbu, (1006,0))
+		nbody = boolean_not(pdiff, nw_shapes, dbu, (1007,0))
+		
+		delete(cell, diff_shapes)
+		for p in nbody.polygons:
+			cell.add(gdspy.Polygon(p, layer = 1006, datatype = 0))
+		for p in pbody.polygons:
+			cell.add(gdspy.Polygon(p, layer = 1007, datatype = 0))
+	except:
+		flag = False
+		error = "Floating Devices Found. Cannot Execute LVS"
 	
-	delete(cell, diff_shapes)
-	for p in nbody.polygons:
-		cell.add(gdspy.Polygon(p, layer = 1006, datatype = 0))
-	for p in pbody.polygons:
-		cell.add(gdspy.Polygon(p, layer = 1007, datatype = 0))
-	
-	return cell
+	return flag, cell, error
 	
 #----------------------------------------------------------------			
 
@@ -98,9 +108,13 @@ def find_edge_sharing(l1, l2, dbu):
 def get_supply(polygons, layermap, netmap):
 	supply = {}
 	for diff in polygons.get(layermap[("diff", "drawing")], []):
-		for bulk in polygons.get((1006,0), []) + polygons.get((1007,0), []):
-			if overlap(diff, bulk):
-				supply[diff] = netmap[diff]
+		for bulk1 in polygons.get((1006,0), []):
+			if overlap(diff, bulk1):
+				supply["NMOS"] = netmap[diff]
+				
+		for bulk2 in polygons.get((1007,0), []):
+			if overlap(diff, bulk2):
+				supply["PMOS"] = netmap[diff]
 				
 	return supply
 
@@ -110,6 +124,8 @@ def find_properties(netmap, devmap, model, supply, dbu):
 	nfinger = defaultdict(int) 
 	width = defaultdict(float)
 	length = defaultdict(float)
+	
+	supply_nets = list(supply.values())
 	
 	for gate, terminals in devmap.items():
 		if not isinstance(terminals, (list, tuple)) or len(terminals) != 2:
@@ -122,18 +138,14 @@ def find_properties(netmap, devmap, model, supply, dbu):
 		src_net = netmap.get(source, "UNCONNECTED")
 		drn_net = netmap.get(drain, "UNCONNECTED")
 		
-		if drn_net in supply:
-			bulk_net = drn_net  
-			key = (src_net, gate_net, drn_net, bulk_net, model)
-		elif src_net in supply:
-			bulk_net = src_net 
-			key = (drn_net, gate_net, src_net, bulk_net, model)
+		if drn_net in supply_nets:
+			key = (src_net, gate_net, drn_net, supply[model], model)
+		elif src_net in supply_nets:
+			key = (drn_net, gate_net, src_net, supply[model], model)
 		elif src_net < drn_net:
-			bulk_net = drn_net  
-			key = (src_net, gate_net, drn_net, bulk_net, model)
+			key = (src_net, gate_net, drn_net, supply[model], model)
 		else:
-			bulk_net = src_net 
-			key = (drn_net, gate_net, src_net, bulk_net, model)
+			key = (drn_net, gate_net, src_net, supply[model], model)
 		
 		nfinger[key] += 1
 		length[key] = cal_length(source, drain, dbu, length[key])
