@@ -12,8 +12,11 @@ export default function App() {
     if (window.location.hostname === "localhost") {
       console.log("Debug: verification skipped in development");
       setVerified(true); // Skip verification
+      localStorage.setItem("cir_file_name", null);
+      localStorage.setItem("gds_file_name", null);
       return;
     }
+
 
     const urlParams = new URLSearchParams(window.location.search);
     const urlToken = urlParams.get("token");
