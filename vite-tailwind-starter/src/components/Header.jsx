@@ -118,7 +118,7 @@ if (missingRules || missingCells) {
         {/* Left section: Brand + 6 icons */}
         <div className="flex items-center gap-8">
           <span className="font-bold text-2xl tracking-wide">
-            LOG<span className="text-emerald-400">IC</span>KNOTS
+            <span className="text-emerald-400">IC</span>heck-LVS
           </span>
 
           <nav className="flex items-center gap-1">
