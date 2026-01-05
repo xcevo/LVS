@@ -50,15 +50,7 @@ export default function CellList({ initialData }) {
   const lastPairRef = useRef("");
 
   const [filter, setFilter] = useState("");
-  const [selected, setSelected] = useState(() => {
-  try {
-    const saved = JSON.parse(localStorage.getItem("selected_lvs_cells") || "[]");
-    return new Set(Array.isArray(saved) ? saved : []);
-  } catch {
-    return new Set();
-  }
-}); // selected cell names
- // selected cell names
+  const [selected, setSelected] = useState(() => new Set()); // ✅ always start fresh
 
   // Fetch once when component mounts OR when user switches to tab 0 first time
   const fetchLvsCells = useCallback(async ({ cirName, gdsName }) => {
@@ -112,6 +104,21 @@ export default function CellList({ initialData }) {
       try { abortRef.current?.abort?.(); } catch {}
     };
   }, []);
+  // ✅ global reset hook (UploadCIR/UploadGDS dispatches this)
+  useEffect(() => {
+    const onReset = () => {
+      setSelected(new Set());
+      setFilter("");
+      setCirFile("");
+      setGdsFile("");
+      setLvsCells([]);
+      setApiErr("");
+      try { localStorage.removeItem("selected_lvs_cells"); } catch {}
+      window.__selectedLvsCells = [];
+    };
+    window.addEventListener("lvs:reset", onReset);
+    return () => window.removeEventListener("lvs:reset", onReset);
+  }, []);
 
   // ✅ Fetch when user opens LVS tab (subTab 0) AND pair is ready
   useEffect(() => {
@@ -129,6 +136,12 @@ export default function CellList({ initialData }) {
       setGdsFile("");
       setLvsCells([]);
       setApiErr("");
+      // ✅ clear old selection when pair changes
+      setSelected(new Set());
+      setFilter("");
+      try { localStorage.removeItem("selected_lvs_cells"); } catch {}
+      window.__selectedLvsCells = [];
+      
     }
 
     // fetch (idempotent due to abort + pairKey check)
@@ -151,6 +164,10 @@ export default function CellList({ initialData }) {
         setGdsFile("");
         setLvsCells([]);
         setApiErr("");
+       setSelected(new Set());
+        setFilter("");
+        try { localStorage.removeItem("selected_lvs_cells"); } catch {}
+        window.__selectedLvsCells = [];
       }
 
       fetchLvsCells({ cirName, gdsName });

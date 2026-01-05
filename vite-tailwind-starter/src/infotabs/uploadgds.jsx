@@ -8,6 +8,19 @@ export default function UploadGDS() {
   const inputRef = useRef(null);
 
   const openPicker = () => inputRef.current?.click();
+  // ✅ clear old LVS/Filter selections so new upload never sends old JSON
+  const resetLvsClientState = () => {
+    try { localStorage.removeItem("selected_lvs_cells"); } catch {}
+    try { window.__selectedLvsCells = []; } catch {}
+
+    // Filter.jsx uses this for selected rules (Header reads it)
+    try { window.__selectedRuleExplanations = []; } catch {}
+
+    // optional "hard reset" signal (CellList listens and clears UI)
+    window.dispatchEvent(
+      new CustomEvent("lvs:reset", { detail: { reason: "gdsChanged" } })
+    );
+  };
 
   const handleFile = async (file) => {
   if (!file) return;
@@ -17,6 +30,7 @@ export default function UploadGDS() {
 
   try {
     // 1) upload file → /get_cellnames  (returns savedPath, unit, precision)
+    resetLvsClientState();
     const fd = new FormData();
     fd.append("gds_file", file);
 

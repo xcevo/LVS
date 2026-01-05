@@ -6,6 +6,15 @@ const API_BASE_URL = import.meta.env.VITE_API_URL;
 export default function UploadCIR() {
   const inputRef = useRef(null);
   const openPicker = () => inputRef.current?.click();
+  // ✅ clear old LVS/Filter selections so new upload never sends old JSON
+  const resetLvsClientState = () => {
+    try { localStorage.removeItem("selected_lvs_cells"); } catch {}
+    try { window.__selectedLvsCells = []; } catch {}
+    try { window.__selectedRuleExplanations = []; } catch {}
+    window.dispatchEvent(
+      new CustomEvent("lvs:reset", { detail: { reason: "cirChanged" } })
+    );
+  };
 
   const handleFile = async (file) => {
     if (!file) return;
@@ -18,6 +27,7 @@ export default function UploadCIR() {
 
     try {
       // 1) Upload CIR → /cir/get_circells
+       resetLvsClientState();
       const fd = new FormData();
       fd.append("cir_file", file);
 
